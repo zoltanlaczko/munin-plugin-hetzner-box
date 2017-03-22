@@ -15,9 +15,15 @@ packages:
 php curlftpfs openssh-client sshpass
 ```
 
+# INSTALLATION
+
+Copy the plugin file into the munin plugins directory. For customization create a file in plugin-conf.d directory.
+
 # CONFIGURATION
 
-The plugin works without any configuration. But you can customize the alias name and warning/critical levels.
+The plugin works without any configuration.
+
+You can customize the alias name and warning/critical levels.
 
 ```
 [hetzner_box]

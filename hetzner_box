@@ -1,0 +1,67 @@
+#!/usr/bin/php
+<?php
+
+/*
+ * Check README.md for details.
+ */
+
+if (!empty($argv[1])){
+    if ($argv[1]=='autoconf'){
+        echo 'yes'.PHP_EOL;
+    } elseif ($argv[1]=='config'){
+        $box_list=get_box_list();
+        echo 'graph_title Hetzner StorageBox Disk Usage'.PHP_EOL;
+        echo 'graph_args --base 1000 -l 0'.PHP_EOL;
+        echo 'graph_vlabel StorageBox Space'.PHP_EOL;
+        echo 'graph_category disk'.PHP_EOL;
+        foreach ($box_list as $box) {
+            echo $box['user'].'_size.label '.$box['name'].' Total Size'.PHP_EOL;
+            echo $box['user'].'_size.draw LINE'.PHP_EOL;
+            echo $box['user'].'_used.label '.$box['name'].' Used Space'.PHP_EOL;
+            echo $box['user'].'_used.draw LINE'.PHP_EOL;
+            echo $box['user'].'_percent.label '.$box['name'].' Percentage'.PHP_EOL;
+            echo $box['user'].'_percent.draw LINE0'.PHP_EOL;
+            if (!empty($_SERVER['box_'.$box['user'].'_warning'])) echo $box['user'].'_percent.warning '.$_SERVER['box_'.$box['user'].'_warning'].PHP_EOL;
+            else echo $box['user'].'_percent.warning 92'.PHP_EOL;
+            if (!empty($_SERVER['box_'.$box['user'].'_critical'])) echo $box['user'].'_percent.critical '.$_SERVER['box_'.$box['user'].'_critical'].PHP_EOL;
+            else echo $box['user'].'_percent.critical 98'.PHP_EOL;
+        }
+    }
+} else {
+    $box_list=get_box_list();
+    foreach ($box_list as $box){
+        $box=get_box_usage($box);
+        echo $box['user'].'_size.value '.$box['size'].PHP_EOL;
+        echo $box['user'].'_used.value '.$box['used'].PHP_EOL;
+        echo $box['user'].'_percent.value '.round($box['used']/$box['size']*100, 2).PHP_EOL;
+    }
+}
+
+function get_box_list(){
+    $box_list=array();
+    preg_match_all("/curlftpfs#([^\s]*)/im", shell_exec('mount |grep "your-storagebox.de"'), $m);
+    if (!empty($m[1])) foreach ($m[1] as $v){
+        $x=parse_url($v);
+        if (!empty($x)) {
+            if (!empty($_SERVER['box_'.$x['user'].'_alias'])) $x['name']=$_SERVER['box_'.$x['user'].'_alias'];
+            else $x['name']=$x['user'];
+            $box_list[]=$x;
+        }
+    }
+    return $box_list;
+}
+
+function get_box_usage($box){
+    $cmd='echo "df" |sshpass -p '.$box['pass'].' sftp -o StrictHostKeyChecking=no -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o ConnectTimeout=2 -o LogLevel=QUIET '.$box['user'].'@'.$box['host'].' 2>&1|tail -1';
+    preg_match("/^\s+(\d+)\s+(\d+)/", shell_exec($cmd), $m);
+    if (!empty($m)){
+        $box['size']=$m[1]*1000;
+        $box['used']=$m[2]*1000;
+    } else {
+        $box['size']=0;
+        $box['used']=0;
+    }
+    return $box;
+}
+
+?>
