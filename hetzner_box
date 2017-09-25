@@ -2,6 +2,8 @@
 <?php
 
 /*
+ * Version 1.1
+ *
  * Check README.md for details.
  */
 
@@ -39,7 +41,7 @@ if (!empty($argv[1])){
 
 function get_box_list(){
     $box_list=array();
-    preg_match_all("/curlftpfs#([^\s]*)/im", shell_exec('mount |grep "your-storagebox.de"'), $m);
+    preg_match_all("/curlftpfs#([^\s]*)/im", shell_exec('mount |egrep "your-storagebox.de|your-backup.de"'), $m);
     if (!empty($m[1])) foreach ($m[1] as $v){
         $x=parse_url($v);
         if (!empty($x)) {
@@ -54,7 +56,7 @@ function get_box_list(){
 function get_box_usage($box){
     $cmd='echo "df" |sshpass -p '.$box['pass'].' sftp -o StrictHostKeyChecking=no -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o ConnectTimeout=2 -o LogLevel=QUIET '.$box['user'].'@'.$box['host'].' 2>&1|tail -1';
     preg_match("/^\s+(\d+)\s+(\d+)/", shell_exec($cmd), $m);
-    if (!empty($m)){
+    if (!empty($m) && is_numeric($m[1]) && is_numeric($m[2])){
         $box['size']=$m[1]*1000;
         $box['used']=$m[2]*1000;
     } else {
